@@ -1,4 +1,4 @@
 Twitter-Cravings
 ================
 
-Uses Twitter to sample what people are craving.
+Uses Twitter's live stream API to extract what people are craving around the world. 
