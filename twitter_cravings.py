@@ -2,6 +2,42 @@ import json
 import pickle
 import string
 import collections
+import csv
+
+def tweet_hour(utc_time, longitude):
+	"""
+	Returns the hour of day at which a tweet was made relative to the tweet's
+	location.
+	"""
+
+	utc_time = utc_time.split()[3].split(':')
+	utc_time = map(float, utc_time)
+	utc_time = utc_time[0] + utc_time[1]/60. + utc_time[2]/3600. 
+	hour = round(utc_time + longitude/15.)
+
+	if hour < 0:
+		return 24.0 + hour
+	elif hour >= 24.:
+		return hour - 24.
+	else:
+		return hour
+
+def generate_sql_db(db_name = 'output.db', output_file = 'output.csv'):
+	"""
+	Stores the data in output_file into a sqlite3 database.
+	"""
+
+	import sqlite3 as lite
+
+	with lite.connect(db_name) as con:
+		cur = con.cursor()
+		cur.execute('CREATE TABLE Cravings(Hour INT, Longitude REAL, Latitude REAL, Craving TEXT)')
+
+		with open(output_file,'rb') as output_data:
+			cravings = csv.reader(output_data)
+			cravings.next()
+
+			cur.executemany("INSERT INTO Cravings VALUES(?, ?, ?, ?)", cravings)
 
 class Twitter_Cravings(object):
 	"""
@@ -114,7 +150,31 @@ class Twitter_Cravings(object):
 
 		return c.most_common(n)
 
-tc = Twitter_Cravings('cravings1.txt')
-tc()
-print tc.most_common_cravings(25)
+	def write_output(self):
+		"""
+		Write results in all_cravings to csv file. Only results with geo
+		coordinates are output.
+		"""
+
+		with open('output.csv','wb') as output_file:
+			write2me = csv.writer(output_file)
+			write2me.writerow(['Hour', 'Longitude', 'Latitude', 'Craving'])
+
+			for tweet_sum in self.all_cravings:
+				if tweet_sum.get('coords'):
+					date, coords, craving = tweet_sum.values()
+					longitude, latitude = coords['coordinates']
+					hour = tweet_hour(date, longitude)
+
+					write2me.writerow([hour, longitude, latitude, craving])
+
+
+# tc = Twitter_Cravings('cravings.txt')
+# tc()
+# print tc.most_common_cravings(25)
+# tc.write_output()
+
+generate_sql_db()
+
+
 
